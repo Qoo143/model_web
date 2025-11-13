@@ -26,6 +26,37 @@ class Group(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # ============================================
+    # 關聯關係
+    # ============================================
+    # 群組擁有者
+    owner = relationship(
+        "User",
+        back_populates="owned_groups",
+        foreign_keys=[owner_id]
+    )
+
+    # 群組成員
+    members = relationship(
+        "GroupMember",
+        back_populates="group",
+        cascade="all, delete-orphan"
+    )
+
+    # 群組文件
+    documents = relationship(
+        "Document",
+        back_populates="group",
+        cascade="all, delete-orphan"
+    )
+
+    # 群組對話
+    conversations = relationship(
+        "Conversation",
+        back_populates="group",
+        cascade="all, delete-orphan"
+    )
+
 class GroupMember(Base):
     """群組成員模型"""
     __tablename__ = "group_members"
@@ -36,3 +67,18 @@ class GroupMember(Base):
     role = Column(Enum(GroupRole), default=GroupRole.VIEWER)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     is_active = Column(Boolean, default=True)
+
+    # ============================================
+    # 關聯關係
+    # ============================================
+    # 所屬群組
+    group = relationship(
+        "Group",
+        back_populates="members"
+    )
+
+    # 所屬使用者
+    user = relationship(
+        "User",
+        back_populates="group_memberships"
+    )

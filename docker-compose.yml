@@ -38,12 +38,33 @@ services:
       - "8008:8000"  # 主機 8008 映射到容器 8000
     networks:
       - library_network
-    command: chroma run --host 0.0.0.0 --port 8000
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=False
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
       timeout: 5s
       retries: 10
       interval: 10s
+
+  # phpMyAdmin - MySQL 網頁管理介面
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: library_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"  # 訪問 http://localhost:8080
+    networks:
+      - library_network
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+      - PMA_USER=library_user
+      - PMA_PASSWORD=library_pass
+      - UPLOAD_LIMIT=50M
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   # Ollama - 本地 LLM 服務 (支援 AMD GPU via ROCm)
   ollama:
@@ -129,10 +150,11 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      chroma:
-        condition: service_healthy
-      ollama:
-        condition: service_healthy
+      # 階段一：暫時不需要 chroma 和 ollama
+      # chroma:
+      #   condition: service_healthy
+      # ollama:
+      #   condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # 前端 Vue 服務

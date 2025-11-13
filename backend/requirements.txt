@@ -1,3 +1,7 @@
+# ============================================
+# 階段一:核心認證系統 (當前啟用)
+# ============================================
+
 # FastAPI 核心
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
@@ -5,31 +9,38 @@ python-multipart==0.0.6
 
 # 資料庫
 sqlalchemy==2.0.23
-asyncmy==0.2.9  # 替代 aiomysql，更好的 async 支援和效能
+asyncmy==0.2.9  # 替代 aiomysql,更好的 async 支援和效能
 alembic==1.12.1
 
 # 認證
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1  # 固定版本,避免與 passlib 不相容
 
 # Pydantic
 pydantic==2.5.0
 pydantic-settings==2.1.0
 email-validator==2.1.0
 
-# LLM & RAG
-langchain==0.1.0
-langchain-community==0.0.10
-ollama==0.1.6
-
-# Embedding & Vector Store
-sentence-transformers==2.2.2
-chromadb==0.4.18
-
-# 文件處理 (簡化：僅支援 txt 和 md 檔案)
-# PyMuPDF==1.23.8  # PDF 支援 (已移除)
-# python-docx==1.1.0  # Word 支援 (已移除)
-# openpyxl==3.1.2  # Excel 支援 (已移除)
-
 # 工具
 python-dotenv==1.0.0
+python-dateutil==2.9.0  # Alembic 時區支援
+
+
+# ============================================
+# 階段二:RAG 功能 (暫時註解,避免建置超時)
+# ============================================
+
+# LLM & RAG
+# langchain==0.1.0
+# langchain-community==0.0.10
+# ollama==0.1.6
+
+# Embedding & Vector Store
+# sentence-transformers==2.2.2
+# chromadb==0.4.18
+
+# 說明:
+# - langchain 及其依賴套件會導致 pip 版本解析超時
+# - 等階段一(認證系統)建置完成並測試通過後
+# - 再逐步加入 RAG 相關套件,或改用更穩定的版本組合

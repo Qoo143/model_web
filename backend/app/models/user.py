@@ -5,6 +5,7 @@
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
 import enum
@@ -67,6 +68,11 @@ class User(Base):
         nullable=False,
         comment="加密後的密碼"
     )
+    full_name = Column(
+        String(100),
+        nullable=True,
+        comment="全名"
+    )
 
     # 角色和狀態
     role = Column(
@@ -90,6 +96,37 @@ class User(Base):
         DateTime(timezone=True),
         onupdate=func.now(),
         comment="更新時間"
+    )
+
+    # ============================================
+    # 關聯關係
+    # ============================================
+    # 使用者擁有的群組
+    owned_groups = relationship(
+        "Group",
+        back_populates="owner",
+        foreign_keys="Group.owner_id"
+    )
+
+    # 使用者加入的群組
+    group_memberships = relationship(
+        "GroupMember",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+    # 使用者上傳的文件
+    uploaded_documents = relationship(
+        "Document",
+        back_populates="uploader",
+        foreign_keys="Document.uploader_id"
+    )
+
+    # 使用者的對話
+    conversations = relationship(
+        "Conversation",
+        back_populates="user",
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self):
