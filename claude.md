@@ -199,7 +199,7 @@ library_agent/
 │   │   │   │
 │   │   │   ├── document/      # 文件處理
 │   │   │   │   ├── __init__.py
-│   │   │   │   ├── parser.py             # 文件解析（PDF/Word/Excel）
+│   │   │   │   ├── parser.py             # 文件解析（txt/md）
 │   │   │   │   ├── chunker.py            # 語意分塊
 │   │   │   │   └── processor.py          # 處理流程協調
 │   │   │   │
@@ -400,25 +400,23 @@ vectorstore.similarity_search(
                  ▼
 ┌─────────────────────────────────────────────────────┐
 │ 2. 後端驗證                                          │
-│    - 檢查檔案大小（< 50MB）                          │
-│    - 檢查檔案格式（PDF/Word/Excel/TXT）              │
+│    - 檢查檔案大小（< 10MB）                          │
+│    - 檢查檔案格式（僅支援 txt/md）                   │
 │    - 檢查使用者權限                                   │
 └────────────────┬────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────┐
 │ 3. 儲存原始檔案                                      │
-│    storage/documents/{user_id}/example.pdf          │
+│    storage/documents/{user_id}/example.txt          │
 └────────────────┬────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────┐
 │ 4. 解析文件內容（Parser）                            │
-│    - PDF: PyMuPDF (fitz)                            │
-│    - Word: python-docx                              │
-│    - Excel: openpyxl                                │
-│    - TXT/MD: 直接讀取                                │
-│    輸出: 純文字 + 元資料（頁碼、結構等）              │
+│    - TXT: 直接讀取（UTF-8）                          │
+│    - MD: Markdown 解析並保留結構                     │
+│    輸出: 純文字 + 元資料（字數、行數等）              │
 └────────────────┬────────────────────────────────────┘
                  │
                  ▼
@@ -906,19 +904,19 @@ def get_accessible_documents(user_id: int, group_id: int) -> List[int]:
 
 ## 開發階段規劃
 
-### Phase 1: 基礎環境（當前）
+### Phase 1: 基礎環境 ✅ 已完成
 - [x] 專案結構設計
-- [ ] Docker 環境配置
-- [ ] Ollama 安裝與測試
-- [ ] MySQL 初始化
-- [ ] 基礎文檔撰寫
+- [x] Docker 環境配置 (MySQL, Backend, Chroma, phpMyAdmin)
+- [x] MySQL 初始化與資料庫遷移 (Alembic)
+- [x] 基礎文檔撰寫 (8 份教學文檔)
+- [x] 版本控制設置 (Git + GitHub)
 
-### Phase 2: 核心功能
-- [ ] 使用者認證系統
-- [ ] 文件上傳 API
-- [ ] 文件解析器（PDF/Word/Excel）
-- [ ] RAG 基礎架構
-- [ ] 前端基本框架
+### Phase 2: 核心功能（當前）
+- [x] 使用者認證系統 (JWT + bcrypt)
+- [ ] 群組管理 API (建立/加入/權限管理)
+- [ ] 文件上傳 API (僅支援 txt/md)
+- [ ] 文件解析器 (簡化版：txt/md 純文字)
+- [ ] 前端基本框架 (Vue 3 + TypeScript)
 
 ### Phase 3: RAG 整合
 - [ ] Chroma 向量庫整合
