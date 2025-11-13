@@ -1,0 +1,167 @@
+version: '3.8'
+
+services:
+  # MySQL 資料庫 - 儲存使用者、群組、權限、文件元資料
+  mysql:
+    image: mysql:8.0
+    container_name: library_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-library_agent}
+      MYSQL_USER: ${MYSQL_USER:-library_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-library_pass}
+    volumes:
+      # Docker volume 持久化 - 重啟後資料不會遺失
+      - mysql_data:/var/lib/mysql
+      # 初始化腳本
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - library_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+      interval: 10s
+
+  # Chroma - 向量資料庫服務 (獨立伺服器模式)
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: library_chroma
+    restart: unless-stopped
+    volumes:
+      # 向量資料持久化 (掛載到宿主機)
+      - ./storage/chroma_server_db:/chroma/chroma
+    ports:
+      - "8008:8000"  # 主機 8008 映射到容器 8000
+    networks:
+      - library_network
+    command: chroma run --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      timeout: 5s
+      retries: 10
+      interval: 10s
+
+  # Ollama - 本地 LLM 服務 (支援 AMD GPU via ROCm)
+  ollama:
+    image: ollama/ollama:rocm
+    container_name: library_ollama
+    restart: unless-stopped
+    volumes:
+      # 模型儲存位置 (掛載到宿主機以持久化模型)
+      - ./storage/ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - library_network
+    # AMD GPU 支援 (明確指定使用 AMD GPU)
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+      - render
+    environment:
+      # AMD GPU 配置
+      - HSA_OVERRIDE_GFX_VERSION=10.3.0  # 根據你的 AMD GPU 型號調整
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_GPU_ENABLED=1
+      - OLLAMA_NUM_GPU=1
+    # 如果沒有 AMD GPU，改用 image: ollama/ollama:latest 並註解掉 devices 和 GPU 相關環境變數
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      timeout: 5s
+      retries: 10
+      interval: 10s
+
+  # 後端 FastAPI 服務
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: library_backend
+    restart: unless-stopped
+    volumes:
+      # 開發時掛載程式碼 (熱更新)
+      - ./backend:/app
+      # 文件儲存 (掛載到宿主機)
+      - ./storage/documents:/app/storage/documents
+    ports:
+      - "8000:8000"
+    networks:
+      - library_network
+    environment:
+      # 資料庫配置 (拆分為獨立環境變數)
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${MYSQL_USER:-library_user}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-library_pass}
+      - DB_NAME=${MYSQL_DATABASE:-library_agent}
+
+      # Ollama 配置
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=gpt-oss-20b
+
+      # JWT 配置 (SECRET_KEY 必須從 .env 提供)
+      - SECRET_KEY=${SECRET_KEY}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+      # 檔案儲存配置
+      - UPLOAD_DIR=/app/storage/documents
+      - MAX_FILE_SIZE=52428800  # 50MB
+
+      # Chroma 配置 (伺服器模式)
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+
+      # Embedding 模型配置
+      - EMBEDDING_MODEL=BAAI/bge-m3
+      - EMBEDDING_DEVICE=cpu  # 或 cuda (如果有 NVIDIA GPU)
+
+      # RAG 配置
+      - CHUNK_SIZE=500
+      - CHUNK_OVERLAP=50
+      - TOP_K_RETRIEVAL=5
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # 前端 Vue 服務
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend/Dockerfile
+    container_name: library_frontend
+    restart: unless-stopped
+    volumes:
+      # 開發時掛載程式碼 (熱更新)
+      - ./frontend:/app
+      - /app/node_modules  # 避免覆蓋 node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - library_network
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+
+# Docker 網路 - 所有服務在同一網路中可互相通訊
+networks:
+  library_network:
+    driver: bridge
+
+# Docker volumes - MySQL 資料持久化
+volumes:
+  mysql_data:
+    driver: local
