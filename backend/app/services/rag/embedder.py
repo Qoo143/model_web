@@ -103,6 +103,7 @@ class EmbeddingService:
                 response.raise_for_status()
                 data = response.json()
 
+                # 回應格式: {"embedding": [...]}
                 embedding = data.get("embedding", [])
                 embeddings.append(embedding)
 

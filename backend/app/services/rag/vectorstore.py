@@ -64,10 +64,10 @@ class VectorStoreService:
             return self._collection_id
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            # 嘗試取得現有 collection
+            # 嘗試取得現有 collection (使用 v2 API)
             try:
                 response = await client.get(
-                    f"{self.base_url}/api/v1/collections/{self.collection_name}"
+                    f"{self.base_url}/api/v2/tenants/default_tenant/databases/default_database/collections/{self.collection_name}"
                 )
                 if response.status_code == 200:
                     data = response.json()
@@ -76,9 +76,9 @@ class VectorStoreService:
             except Exception:
                 pass
 
-            # 建立新 collection
+            # 建立新 collection (使用 v2 API)
             response = await client.post(
-                f"{self.base_url}/api/v1/collections",
+                f"{self.base_url}/api/v2/tenants/default_tenant/databases/default_database/collections",
                 json={
                     "name": self.collection_name,
                     "metadata": {"description": "Library RAG documents"}
@@ -121,7 +121,7 @@ class VectorStoreService:
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
-                f"{self.base_url}/api/v1/collections/{self._collection_id}/add",
+                f"{self.base_url}/api/v2/tenants/default_tenant/databases/default_database/collections/{self._collection_id}/add",
                 json=payload
             )
             response.raise_for_status()
@@ -159,7 +159,7 @@ class VectorStoreService:
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
-                f"{self.base_url}/api/v1/collections/{self._collection_id}/query",
+                f"{self.base_url}/api/v2/tenants/default_tenant/databases/default_database/collections/{self._collection_id}/query",
                 json=payload
             )
             response.raise_for_status()
@@ -200,7 +200,7 @@ class VectorStoreService:
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
-                f"{self.base_url}/api/v1/collections/{self._collection_id}/delete",
+                f"{self.base_url}/api/v2/tenants/default_tenant/databases/default_database/collections/{self._collection_id}/delete",
                 json={"ids": ids}
             )
             response.raise_for_status()
@@ -220,7 +220,7 @@ class VectorStoreService:
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
-                f"{self.base_url}/api/v1/collections/{self._collection_id}/delete",
+                f"{self.base_url}/api/v2/tenants/default_tenant/databases/default_database/collections/{self._collection_id}/delete",
                 json={"where": where}
             )
             response.raise_for_status()
@@ -232,7 +232,7 @@ class VectorStoreService:
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(
-                f"{self.base_url}/api/v1/collections/{self._collection_id}/count"
+                f"{self.base_url}/api/v2/tenants/default_tenant/databases/default_database/collections/{self._collection_id}/count"
             )
             response.raise_for_status()
             return response.json()
@@ -242,7 +242,7 @@ class VectorStoreService:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(
-                    f"{self.base_url}/api/v1/heartbeat"
+                    f"{self.base_url}/api/v2/heartbeat"
                 )
                 return response.status_code == 200
         except Exception:

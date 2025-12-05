@@ -5,6 +5,7 @@
 """
 
 import asyncio
+import logging
 from typing import Optional, List, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,6 +16,8 @@ from sqlalchemy import select
 from app.models.document import Document, DocumentStatus
 from app.services.document.parser import DocumentParser, ParsedDocument
 from app.services.document.chunker import TextChunker, TextChunk
+from app.services.rag.embedder import embedding_service
+from app.services.rag.vectorstore import vectorstore_service
 from app.core.config import settings
 
 
@@ -35,7 +38,7 @@ class DocumentProcessor:
     業務邏輯：
     1. 解析文件內容
     2. 將內容分塊
-    3. （Phase 3）向量化並存入 Chroma
+    3. 向量化並存入 Chroma
     4. 更新文件狀態
 
     處理流程：
@@ -93,6 +96,7 @@ class DocumentProcessor:
 
             # 3. 解析文件
             parsed = self.parser.parse(document.file_path)
+            logging.info(f"Document {document_id} parsed: {parsed.line_count} lines, {len(parsed.content)} chars")
 
             if on_progress:
                 on_progress(30, "文件解析完成，開始分塊")
@@ -105,12 +109,14 @@ class DocumentProcessor:
                 "file_type": document.file_type
             }
             chunks = self.chunker.split(parsed.content, metadata)
+            logging.info(f"Document {document_id} chunked: {len(chunks)} chunks")
 
             if on_progress:
-                on_progress(50, f"分塊完成，共 {len(chunks)} 個塊")
+                on_progress(50, f"分塊完成，共 {len(chunks)} 個塊，開始向量化")
 
-            # 5. TODO: 向量化並存入 Chroma (Phase 3)
-            # await self._vectorize_chunks(chunks, document)
+            # 5. 向量化並存入 Chroma
+            await self._vectorize_chunks(chunks, document)
+            logging.info(f"Document {document_id} vectorized and stored in Chroma")
 
             if on_progress:
                 on_progress(90, "向量化完成")
@@ -132,6 +138,7 @@ class DocumentProcessor:
             )
 
         except Exception as e:
+            logging.error(f"Document {document_id} processing failed: {e}")
             # 處理失敗
             document.processing_status = DocumentStatus.FAILED
             document.error_message = str(e)
@@ -142,6 +149,43 @@ class DocumentProcessor:
                 document_id=document_id,
                 error_message=str(e)
             )
+
+    async def _vectorize_chunks(self, chunks: List[TextChunk], document: Document):
+        """
+        向量化切片並存入 Chroma
+
+        Args:
+            chunks: 文本切片列表
+            document: 文件物件
+        """
+        if not chunks:
+            return
+
+        # 準備資料
+        texts = [chunk.content for chunk in chunks]
+        ids = [f"doc_{document.id}_chunk_{chunk.chunk_index}" for chunk in chunks]
+        metadatas = [
+            {
+                "document_id": document.id,
+                "group_id": document.group_id,
+                "filename": document.original_filename,
+                "chunk_index": chunk.chunk_index,
+                "start_char": chunk.start_char,
+                "end_char": chunk.end_char
+            }
+            for chunk in chunks
+        ]
+
+        # 生成 embeddings
+        embedding_result = await embedding_service.embed_texts(texts)
+
+        # 存入 Chroma
+        await vectorstore_service.add_documents(
+            ids=ids,
+            documents=texts,
+            embeddings=embedding_result.embeddings,
+            metadatas=metadatas
+        )
 
     async def process_documents_batch(
         self,

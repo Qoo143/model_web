@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, List, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
@@ -33,6 +33,7 @@ from app.schemas.document import (
     MessageResponse,
     UploadResponse,
 )
+from app.services.document.processor import DocumentProcessor
 
 # 建立路由器
 router = APIRouter(
@@ -126,6 +127,30 @@ def can_view_document(member_role: GroupRole, doc_min_role: DocumentRole) -> boo
 
 
 # ============================================
+# 文件處理後台任務
+# ============================================
+
+async def process_document_task(document_id: int):
+    """後台處理文件任務"""
+    import logging
+    from app.core.database import AsyncSessionLocal
+    
+    logging.info(f"Starting document processing for document_id={document_id}")
+    
+    processor = DocumentProcessor()
+    try:
+        # 創建獨立的資料庫 session
+        async with AsyncSessionLocal() as db:
+            result = await processor.process_document(db, document_id)
+            if result.success:
+                logging.info(f"Document processing completed for document_id={document_id}, chunks={result.chunk_count}")
+            else:
+                logging.error(f"Document processing failed for document_id={document_id}: {result.error_message}")
+    except Exception as e:
+        logging.error(f"Document processing failed for document_id={document_id}: {e}")
+
+
+# ============================================
 # 文件上傳 API
 # ============================================
 
@@ -151,6 +176,7 @@ def can_view_document(member_role: GroupRole, doc_min_role: DocumentRole) -> boo
     """
 )
 async def upload_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="要上傳的文件"),
     group_id: int = Form(..., description="目標群組 ID"),
     min_view_role: DocumentRole = Form(
@@ -238,11 +264,11 @@ async def upload_document(
     await db.commit()
     await db.refresh(new_document)
 
-    # TODO: 觸發後台處理（Phase 3 實作）
-    # background_tasks.add_task(process_document, new_document.id)
+    # 8. 觸發後台處理
+    background_tasks.add_task(process_document_task, new_document.id)
 
     return UploadResponse(
-        message="文件上傳成功，等待處理",
+        message="文件上傳成功，正在處理中",
         document=DocumentResponse(
             id=new_document.id,
             filename=new_document.filename,

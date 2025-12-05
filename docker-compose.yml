@@ -21,7 +21,7 @@ services:
     networks:
       - library_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       timeout: 5s
       retries: 10
       interval: 10s
@@ -35,14 +35,14 @@ services:
       # 向量資料持久化 (掛載到宿主機)
       - ./storage/chroma_server_db:/chroma/chroma
     ports:
-      - "8008:8000"  # 主機 8008 映射到容器 8000
+      - "8008:8000" # 主機 8008 映射到容器 8000
     networks:
       - library_network
     environment:
       - IS_PERSISTENT=TRUE
       - ANONYMIZED_TELEMETRY=False
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat" ]
       timeout: 5s
       retries: 10
       interval: 10s
@@ -53,7 +53,7 @@ services:
     container_name: library_phpmyadmin
     restart: unless-stopped
     ports:
-      - "8080:80"  # 訪問 http://localhost:8080
+      - "8080:80" # 訪問 http://localhost:8080
     networks:
       - library_network
     environment:
@@ -66,9 +66,9 @@ services:
       mysql:
         condition: service_healthy
 
-  # Ollama - 本地 LLM 服務 (支援 AMD GPU via ROCm)
+  # Ollama - 本地 LLM 服務
   ollama:
-    image: ollama/ollama:rocm
+    image: ollama/ollama:latest # 使用標準版本，Windows 兼容
     container_name: library_ollama
     restart: unless-stopped
     volumes:
@@ -78,22 +78,18 @@ services:
       - "11434:11434"
     networks:
       - library_network
-    # AMD GPU 支援 (明確指定使用 AMD GPU)
-    devices:
-      - /dev/kfd:/dev/kfd
-      - /dev/dri:/dev/dri
-    group_add:
-      - video
-      - render
     environment:
-      # AMD GPU 配置
-      - HSA_OVERRIDE_GFX_VERSION=10.3.0  # 根據你的 AMD GPU 型號調整
       - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_GPU_ENABLED=1
-      - OLLAMA_NUM_GPU=1
-    # 如果沒有 AMD GPU，改用 image: ollama/ollama:latest 並註解掉 devices 和 GPU 相關環境變數
+    # 如果有 NVIDIA GPU，可以添加以下設定：
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:11434/" ]
       timeout: 5s
       retries: 10
       interval: 10s
@@ -138,15 +134,15 @@ services:
 
       # 檔案儲存配置
       - UPLOAD_DIR=/app/storage/documents
-      - MAX_FILE_SIZE=52428800  # 50MB
+      - MAX_FILE_SIZE=52428800 # 50MB
 
       # Chroma 配置 (伺服器模式)
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
 
       # Embedding 模型配置
-      - EMBEDDING_MODEL=BAAI/bge-m3
-      - EMBEDDING_DEVICE=cpu  # 或 cuda (如果有 NVIDIA GPU)
+      - EMBEDDING_MODEL=nomic-embed-text
+      - EMBEDDING_DEVICE=cpu # 或 cuda (如果有 NVIDIA GPU)
 
       # RAG 配置
       - CHUNK_SIZE=500
@@ -173,7 +169,7 @@ services:
     volumes:
       # 開發時掛載程式碼 (熱更新)
       - ./frontend:/app
-      - /app/node_modules  # 避免覆蓋 node_modules
+      - /app/node_modules # 避免覆蓋 node_modules
     ports:
       - "5173:5173"
     networks:

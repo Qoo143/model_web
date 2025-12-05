@@ -39,20 +39,20 @@ class RetrieverService:
 
     def __init__(
         self,
-        embedding_service: EmbeddingService = None,
-        vectorstore_service: VectorStoreService = None,
+        embed_service: EmbeddingService = None,
+        vector_service: VectorStoreService = None,
         top_k: int = None
     ):
         """
         初始化檢索服務
 
         Args:
-            embedding_service: Embedding 服務
-            vectorstore_service: 向量資料庫服務
+            embed_service: Embedding 服務
+            vector_service: 向量資料庫服務
             top_k: 返回的文件數量
         """
-        self.embedding = embedding_service or embedding_service
-        self.vectorstore = vectorstore_service or vectorstore_service
+        self.embedding = embed_service or embedding_service
+        self.vectorstore = vector_service or vectorstore_service
         self.top_k = top_k or settings.TOP_K_RETRIEVAL
 
     async def retrieve(

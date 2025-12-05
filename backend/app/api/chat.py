@@ -414,8 +414,17 @@ async def ask_question(
 
     # 4. 取得對話歷史（最近 6 條訊息）
     conversation_history = []
-    if hasattr(conversation, 'messages') and conversation.messages:
-        for msg in sorted(conversation.messages, key=lambda x: x.created_at)[-6:]:
+    if request.conversation_id:
+        # 只有現有對話才有歷史訊息
+        # 重新查詢訊息以避免 lazy loading 問題
+        msg_result = await db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation.id)
+            .order_by(Message.created_at.desc())
+            .limit(6)
+        )
+        history_messages = msg_result.scalars().all()
+        for msg in reversed(history_messages):
             conversation_history.append({
                 "role": msg.role.value,
                 "content": msg.content

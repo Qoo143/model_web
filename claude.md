@@ -931,12 +931,22 @@ def get_accessible_documents(user_id: int, group_id: int) -> List[int]:
 - [x] 對話歷史管理
 - [x] 來源引用儲存
 
-### Phase 5: 使用者介面（待開發）
-- [ ] 對話介面
-- [ ] 文件管理頁面
-- [ ] 來源引用顯示
-- [ ] 文件選擇器
-- [ ] 響應式設計
+### Phase 5: 使用者介面 ✅ 已完成
+- [x] 對話介面 (`views/ChatView.vue`) - 對話列表 + 即時問答
+- [x] 文件管理頁面 (`views/DocumentsView.vue`) - 上傳/列表/刪除 + 處理進度
+- [x] 群組管理頁面 (`views/GroupsView.vue`) - 建立/列表/刪除群組
+- [x] 來源引用顯示 - 訊息中顯示引用來源
+- [x] 文件選擇器 - 群組選擇 + 文件篩選
+- [x] 響應式設計 - 桌面 + 行動裝置支援
+- [x] 設計系統 - 水泥工業風 + 深色模式
+- [x] 狀態管理 (`stores/`) - auth, chat, theme
+
+### Phase 5.5: RAG 系統整合修復 ✅ 已完成
+- [x] 文件上傳後自動觸發處理 (`BackgroundTasks`)
+- [x] Ollama Embedding 服務 (`/api/embeddings` endpoint)
+- [x] Chroma 向量資料庫 v2 API 整合
+- [x] 文件處理 → 分塊 → 向量化 → 儲存完整流程
+- [x] RAG 查詢 + 來源引用功能
 
 ### Phase 6: 優化與測試（待開發）
 - [ ] 效能優化

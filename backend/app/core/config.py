@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     # ============================================
     # Embedding 模型配置
     # ============================================
-    EMBEDDING_MODEL: str = "BAAI/bge-m3"
+    EMBEDDING_MODEL: str = "nomic-embed-text"  # Ollama 模型名稱
     EMBEDDING_DEVICE: str = "cpu"  # cpu 或 cuda
 
     # ============================================

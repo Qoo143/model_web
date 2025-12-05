@@ -112,20 +112,27 @@ class RAGChain:
             RAGResponse: RAG 回應
         """
         k = top_k or self.top_k
+        retrieval_results = []
 
-        # 1. 檢索相關文件
-        if document_ids:
-            retrieval_results = await self.retriever.retrieve_for_documents(
-                query=question,
-                document_ids=document_ids,
-                top_k=k
-            )
-        else:
-            retrieval_results = await self.retriever.retrieve_for_group(
-                query=question,
-                group_id=group_id,
-                top_k=k
-            )
+        # 1. 嘗試檢索相關文件
+        try:
+            if document_ids:
+                retrieval_results = await self.retriever.retrieve_for_documents(
+                    query=question,
+                    document_ids=document_ids,
+                    top_k=k
+                )
+            else:
+                retrieval_results = await self.retriever.retrieve_for_group(
+                    query=question,
+                    group_id=group_id,
+                    top_k=k
+                )
+        except Exception as e:
+            # 如果檢索失敗（如 Ollama 未啟動），直接使用 LLM
+            import logging
+            logging.warning(f"RAG retrieval failed, using direct LLM: {e}")
+            retrieval_results = []
 
         # 2. 構建上下文
         context = self._build_context(retrieval_results)
