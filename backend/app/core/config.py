@@ -55,11 +55,23 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # ============================================
-    # Ollama LLM 配置
+    # LLM 提供者選擇
+    # ============================================
+    LLM_PROVIDER: str = "ollama"  # ollama 或 gemini
+
+    # ============================================
+    # Ollama LLM 配置 (本地模型)
     # ============================================
     OLLAMA_BASE_URL: str = "http://ollama:11434"
     OLLAMA_MODEL: str = "gpt-oss-20b"
     OLLAMA_TEMPERATURE: float = 0.3  # 0.0 = 確定性, 1.0 = 創造性
+
+    # ============================================
+    # Gemini API 配置 (雲端模型)
+    # ============================================
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_TEMPERATURE: float = 0.3
 
     # ============================================
     # Embedding 模型配置

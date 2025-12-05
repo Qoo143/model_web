@@ -1,0 +1,284 @@
+"""
+RAG Chain
+
+整合檢索和生成的完整 RAG 流程
+"""
+
+from typing import List, Optional, Dict, Any
+from dataclasses import dataclass, field
+from datetime import datetime
+
+from app.services.rag.retriever import RetrieverService, retriever_service, RetrievalResult
+from app.services.llm.base import BaseLLMService, Message
+from app.services.llm.factory import get_llm_service
+from app.core.config import settings
+
+
+@dataclass
+class RAGResponse:
+    """RAG 回應"""
+    answer: str
+    sources: List[Dict[str, Any]]
+    model: str
+    retrieval_count: int
+    generation_time: Optional[float] = None
+    confidence: float = 0.0
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+class RAGChain:
+    """
+    RAG Chain
+
+    業務邏輯：
+    1. 接收使用者問題
+    2. 檢索相關文件片段
+    3. 構建包含上下文的 prompt
+    4. 呼叫 LLM 生成答案
+    5. 解析並返回答案和來源
+
+    Prompt 結構：
+    - 系統指示：定義 AI 的角色和行為
+    - 上下文：檢索到的相關文件
+    - 對話歷史：之前的對話（可選）
+    - 使用者問題：當前問題
+    """
+
+    # 系統提示模板
+    SYSTEM_PROMPT_TEMPLATE = """你是一個專業的文件分析助手。你的任務是根據提供的文件內容回答使用者的問題。
+
+重要規則：
+1. 只根據提供的文件內容回答，不要編造資訊
+2. 如果文件中沒有相關資訊，請明確說明「根據提供的文件，無法找到相關資訊」
+3. 回答時請引用資訊來源，使用格式 [來源: 文件名]
+4. 保持回答簡潔、準確、專業
+5. 使用使用者的提問語言回答（中文問題用中文回答）
+
+當前時間：{current_time}
+"""
+
+    # 上下文模板
+    CONTEXT_TEMPLATE = """以下是與問題相關的文件內容：
+
+{contexts}
+
+---
+"""
+
+    # 單個文件片段模板
+    CHUNK_TEMPLATE = """【{filename}】
+{content}
+"""
+
+    def __init__(
+        self,
+        retriever: RetrieverService = None,
+        llm_service: BaseLLMService = None,
+        top_k: int = None
+    ):
+        """
+        初始化 RAG Chain
+
+        Args:
+            retriever: 檢索服務
+            llm_service: LLM 服務
+            top_k: 檢索數量
+        """
+        self.retriever = retriever or retriever_service
+        self.llm = llm_service or get_llm_service()
+        self.top_k = top_k or settings.TOP_K_RETRIEVAL
+
+    async def query(
+        self,
+        question: str,
+        group_id: int,
+        document_ids: Optional[List[int]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        top_k: int = None,
+        llm_provider: str = None
+    ) -> RAGResponse:
+        """
+        執行 RAG 查詢
+
+        Args:
+            question: 使用者問題
+            group_id: 群組 ID
+            document_ids: 限制在這些文件中搜尋（可選）
+            conversation_history: 對話歷史（可選）
+            top_k: 檢索數量（覆蓋預設值）
+            llm_provider: LLM 提供者（覆蓋預設值）
+
+        Returns:
+            RAGResponse: RAG 回應
+        """
+        k = top_k or self.top_k
+
+        # 1. 檢索相關文件
+        if document_ids:
+            retrieval_results = await self.retriever.retrieve_for_documents(
+                query=question,
+                document_ids=document_ids,
+                top_k=k
+            )
+        else:
+            retrieval_results = await self.retriever.retrieve_for_group(
+                query=question,
+                group_id=group_id,
+                top_k=k
+            )
+
+        # 2. 構建上下文
+        context = self._build_context(retrieval_results)
+
+        # 3. 構建訊息
+        messages = self._build_messages(
+            question=question,
+            context=context,
+            conversation_history=conversation_history
+        )
+
+        # 4. 選擇 LLM
+        llm = get_llm_service(llm_provider) if llm_provider else self.llm
+
+        # 5. 呼叫 LLM
+        llm_response = await llm.chat(messages)
+
+        # 6. 構建來源資訊
+        sources = [
+            {
+                "document_id": r.document_id,
+                "document_name": r.document_name,
+                "chunk_index": r.chunk_index,
+                "content": r.content[:200] + "..." if len(r.content) > 200 else r.content,
+                "score": round(r.score, 3)
+            }
+            for r in retrieval_results
+        ]
+
+        # 7. 計算信心分數（基於檢索分數）
+        confidence = 0.0
+        if retrieval_results:
+            confidence = sum(r.score for r in retrieval_results) / len(retrieval_results)
+
+        return RAGResponse(
+            answer=llm_response.content,
+            sources=sources,
+            model=llm_response.model,
+            retrieval_count=len(retrieval_results),
+            generation_time=llm_response.generation_time,
+            confidence=round(confidence, 3),
+            metadata={
+                "prompt_tokens": llm_response.prompt_tokens,
+                "completion_tokens": llm_response.completion_tokens,
+                "total_tokens": llm_response.total_tokens
+            }
+        )
+
+    def _build_context(self, retrieval_results: List[RetrievalResult]) -> str:
+        """構建上下文文本"""
+        if not retrieval_results:
+            return ""
+
+        chunks = []
+        for r in retrieval_results:
+            chunk_text = self.CHUNK_TEMPLATE.format(
+                filename=r.document_name or f"Document {r.document_id}",
+                content=r.content
+            )
+            chunks.append(chunk_text)
+
+        contexts = "\n".join(chunks)
+        return self.CONTEXT_TEMPLATE.format(contexts=contexts)
+
+    def _build_messages(
+        self,
+        question: str,
+        context: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None
+    ) -> List[Message]:
+        """構建 LLM 訊息"""
+        messages = []
+
+        # 系統提示
+        system_prompt = self.SYSTEM_PROMPT_TEMPLATE.format(
+            current_time=datetime.now().strftime("%Y-%m-%d %H:%M")
+        )
+        messages.append(Message(role="system", content=system_prompt))
+
+        # 上下文
+        if context:
+            messages.append(Message(role="user", content=context))
+            messages.append(Message(role="assistant", content="我已閱讀以上文件內容，請提出您的問題。"))
+
+        # 對話歷史
+        if conversation_history:
+            for msg in conversation_history[-6:]:  # 最多保留最近 3 輪對話
+                messages.append(Message(
+                    role=msg["role"],
+                    content=msg["content"]
+                ))
+
+        # 當前問題
+        messages.append(Message(role="user", content=question))
+
+        return messages
+
+    async def query_stream(
+        self,
+        question: str,
+        group_id: int,
+        document_ids: Optional[List[int]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        top_k: int = None,
+        llm_provider: str = None
+    ):
+        """
+        串流式 RAG 查詢
+
+        與 query() 相同，但串流返回答案
+        用於即時顯示生成內容
+        """
+        k = top_k or self.top_k
+
+        # 1-3: 與 query() 相同
+        if document_ids:
+            retrieval_results = await self.retriever.retrieve_for_documents(
+                query=question,
+                document_ids=document_ids,
+                top_k=k
+            )
+        else:
+            retrieval_results = await self.retriever.retrieve_for_group(
+                query=question,
+                group_id=group_id,
+                top_k=k
+            )
+
+        context = self._build_context(retrieval_results)
+        messages = self._build_messages(question, context, conversation_history)
+
+        # 4. 選擇 LLM 並串流生成
+        llm = get_llm_service(llm_provider) if llm_provider else self.llm
+
+        # 構建完整 prompt
+        full_prompt = "\n".join([m.content for m in messages if m.role == "user"])
+        system_prompt = next((m.content for m in messages if m.role == "system"), None)
+
+        # 串流返回
+        async for chunk in llm.stream(full_prompt, system_prompt):
+            yield chunk
+
+        # 返回來源資訊（作為最終訊息）
+        sources = [
+            {
+                "document_id": r.document_id,
+                "document_name": r.document_name,
+                "score": round(r.score, 3)
+            }
+            for r in retrieval_results
+        ]
+        yield {"type": "sources", "data": sources}
+
+
+# 單例實例
+rag_chain = RAGChain()

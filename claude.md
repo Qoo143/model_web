@@ -911,35 +911,41 @@ def get_accessible_documents(user_id: int, group_id: int) -> List[int]:
 - [x] 基礎文檔撰寫 (8 份教學文檔)
 - [x] 版本控制設置 (Git + GitHub)
 
-### Phase 2: 核心功能（當前）
+### Phase 2: 核心功能 ✅ 已完成
 - [x] 使用者認證系統 (JWT + bcrypt)
-- [ ] 群組管理 API (建立/加入/權限管理)
-- [ ] 文件上傳 API (僅支援 txt/md)
-- [ ] 文件解析器 (簡化版：txt/md 純文字)
-- [ ] 前端基本框架 (Vue 3 + TypeScript)
+- [x] 群組管理 API (`api/groups.py`) - CRUD + 成員管理
+- [x] 文件上傳 API (`api/documents.py`) - 上傳/下載/刪除
+- [x] 文件處理服務 (`services/document/`) - 解析/分塊/協調
 
-### Phase 3: RAG 整合
-- [ ] Chroma 向量庫整合
-- [ ] BGE-M3 Embedding
-- [ ] Ollama LLM 整合
-- [ ] 檢索鏈實作
-- [ ] 對話管理
+### Phase 3: RAG 整合 ✅ 已完成
+- [x] LLM 服務 (`services/llm/`) - 抽象層 + Ollama + Gemini
+- [x] LLM 提供者切換 - 透過 LLM_PROVIDER 環境變數
+- [x] Gemini API 整合 - 支援 gemini-2.0-flash 等模型
+- [x] Embedding 服務 (`services/rag/embedder.py`)
+- [x] Chroma 向量庫 (`services/rag/vectorstore.py`)
+- [x] 檢索服務 (`services/rag/retriever.py`)
+- [x] RAG Chain (`services/rag/chain.py`)
 
-### Phase 4: 使用者介面
+### Phase 4: 對話管理 ✅ 已完成
+- [x] 對話 API (`api/chat.py`) - CRUD + RAG 問答
+- [x] 對話歷史管理
+- [x] 來源引用儲存
+
+### Phase 5: 使用者介面（待開發）
 - [ ] 對話介面
 - [ ] 文件管理頁面
 - [ ] 來源引用顯示
 - [ ] 文件選擇器
 - [ ] 響應式設計
 
-### Phase 5: 優化與測試
+### Phase 6: 優化與測試（待開發）
 - [ ] 效能優化
 - [ ] 錯誤處理
 - [ ] 單元測試
 - [ ] 整合測試
 - [ ] 文檔完善
 
-### Phase 6: 部署準備
+### Phase 7: 部署準備（待開發）
 - [ ] Docker 優化
 - [ ] 環境變數管理
 - [ ] 日誌系統

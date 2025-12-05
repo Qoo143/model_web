@@ -126,6 +126,12 @@ services:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL=gpt-oss-20b
 
+      # LLM 提供者配置
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0.3}
+
       # JWT 配置 (SECRET_KEY 必須從 .env 提供)
       - SECRET_KEY=${SECRET_KEY}
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
