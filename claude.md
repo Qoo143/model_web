@@ -948,9 +948,13 @@ def get_accessible_documents(user_id: int, group_id: int) -> List[int]:
 - [x] 文件處理 → 分塊 → 向量化 → 儲存完整流程
 - [x] RAG 查詢 + 來源引用功能
 
-### Phase 6: 優化與測試（待開發）
-- [ ] 效能優化
-- [ ] 錯誤處理
+### Phase 6: 系統優化 ✅ 部分完成
+- [x] **Chroma 向量清理** - 刪除文件時自動清理向量資料
+- [x] **Gemini 模型更新** - 升級至 `gemini-2.0-flash-exp`
+- [x] **RAG 參數優化** - CHUNK_SIZE=800, OVERLAP=200, TOP_K=8
+- [x] **Prompt 優化** - 結構化回答指引，更精確的引用格式
+- [x] **Debug API** - `/api/debug/chroma-status` 監控向量庫狀態
+- [x] **UX 優化** - Logo 可點擊返回首頁，來源引用可摺疊
 - [ ] 單元測試
 - [ ] 整合測試
 - [ ] 文檔完善

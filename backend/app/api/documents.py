@@ -643,8 +643,14 @@ async def delete_document(
             # 記錄錯誤但繼續刪除資料庫記錄
             print(f"刪除檔案失敗: {e}")
 
-    # TODO: 刪除向量庫資料（Phase 3 實作）
-    # await vectorstore.delete_document(document_id)
+    # 4. 刪除向量庫資料
+    try:
+        from app.services.rag.vectorstore import vectorstore_service
+        # 使用 document_id 過濾並刪除所有相關的 chunks
+        await vectorstore_service.delete_by_filter({"document_id": document_id})
+        print(f"已刪除文件 {document_id} 的向量資料")
+    except Exception as e:
+        print(f"刪除向量資料失敗: {e}")
 
     # 4. 更新群組文件數
     if document.group:

@@ -1,14 +1,14 @@
 <template>
   <div class="sidebar-container">
-    <!-- Logo -->
+    <!-- Logo (可點擊返回首頁) -->
     <div class="sidebar-header">
-      <div class="logo">
+      <router-link to="/" class="logo" title="返回首頁">
         <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
         <span class="logo-text">Library RAG</span>
-      </div>
+      </router-link>
       <button class="close-btn" @click="$emit('close')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6L6 18M6 6l12 12" />
@@ -156,6 +156,11 @@ onMounted(() => {
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
+  transition: color var(--transition-fast);
+}
+
+.logo:hover .logo-text {
+  color: var(--color-accent);
 }
 
 .close-btn {

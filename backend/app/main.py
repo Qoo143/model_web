@@ -113,7 +113,7 @@ async def shutdown_event():
 # ============================================
 # 註冊路由
 # ============================================
-from app.api import auth, groups, documents, chat
+from app.api import auth, groups, documents, chat, debug
 
 # 註冊認證路由
 app.include_router(auth.router, prefix="/api")
@@ -126,6 +126,9 @@ app.include_router(documents.router, prefix="/api")
 
 # 註冊對話管理路由
 app.include_router(chat.router, prefix="/api")
+
+# 註冊調試路由
+app.include_router(debug.router, prefix="/api")
 
 # ============================================
 # 開發模式啟動

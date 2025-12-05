@@ -31,16 +31,30 @@
         <div class="message-content">
           <div class="message-text">{{ message.content }}</div>
           
-          <!-- 來源引用 -->
+          <!-- 來源引用 (可摺疊) -->
           <div v-if="message.sources?.length" class="sources">
-            <div class="sources-header">
+            <button 
+              class="sources-toggle" 
+              @click="toggleSources(message.id)"
+              type="button"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14,2 14,8 20,8" />
               </svg>
-              來源引用
-            </div>
-            <div class="sources-list">
+              <span>來源引用 ({{ message.sources.length }})</span>
+              <svg 
+                class="chevron" 
+                :class="{ 'chevron--open': expandedSources.has(message.id) }"
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                stroke-width="2"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <div v-if="expandedSources.has(message.id)" class="sources-list">
               <div 
                 v-for="(source, idx) in message.sources" 
                 :key="idx"
@@ -113,6 +127,19 @@ const userInitial = computed(() => authStore.user?.username?.charAt(0).toUpperCa
 
 const messagesContainer = ref<HTMLElement | null>(null)
 const inputText = ref('')
+
+// 展開的來源引用集合 (預設摺疊)
+const expandedSources = ref<Set<number>>(new Set())
+
+const toggleSources = (messageId: number) => {
+  if (expandedSources.value.has(messageId)) {
+    expandedSources.value.delete(messageId)
+  } else {
+    expandedSources.value.add(messageId)
+  }
+  // 觸發響應式更新
+  expandedSources.value = new Set(expandedSources.value)
+}
 
 const handleSend = async () => {
   if (!inputText.value.trim() || chatStore.isSending || !chatStore.currentGroupId) return
@@ -271,29 +298,69 @@ watch(() => chatStore.messages.length, () => {
   margin-top: var(--spacing-xs);
 }
 
-/* 來源引用 */
+/* 來源引用 (可摺疊) */
 .sources {
   margin-top: var(--spacing-md);
 }
 
-.sources-header {
+.sources-toggle {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-tertiary);
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  width: 100%;
 }
 
-.sources-header svg {
+.sources-toggle:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.sources-toggle svg:first-child {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
+}
+
+.sources-toggle span {
+  flex: 1;
+  text-align: left;
+}
+
+.sources-toggle .chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--transition-fast);
+}
+
+.sources-toggle .chevron--open {
+  transform: rotate(180deg);
 }
 
 .sources-list {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .source-card {

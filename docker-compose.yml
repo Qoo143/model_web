@@ -125,8 +125,8 @@ services:
       # LLM 提供者配置
       - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
-      - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0.3}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash-exp}
+      - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0.2}
 
       # JWT 配置 (SECRET_KEY 必須從 .env 提供)
       - SECRET_KEY=${SECRET_KEY}
@@ -144,10 +144,10 @@ services:
       - EMBEDDING_MODEL=nomic-embed-text
       - EMBEDDING_DEVICE=cpu # 或 cuda (如果有 NVIDIA GPU)
 
-      # RAG 配置
-      - CHUNK_SIZE=500
-      - CHUNK_OVERLAP=50
-      - TOP_K_RETRIEVAL=5
+      # RAG 配置 (優化版)
+      - CHUNK_SIZE=800
+      - CHUNK_OVERLAP=200
+      - TOP_K_RETRIEVAL=8
 
     depends_on:
       mysql:

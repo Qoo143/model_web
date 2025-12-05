@@ -70,8 +70,8 @@ class Settings(BaseSettings):
     # Gemini API 配置 (雲端模型)
     # ============================================
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.0-flash"
-    GEMINI_TEMPERATURE: float = 0.3
+    GEMINI_MODEL: str = "gemini-2.0-flash-exp"  # 使用最新實驗版模型
+    GEMINI_TEMPERATURE: float = 0.2  # 降低溫度提高一致性
 
     # ============================================
     # Embedding 模型配置
@@ -106,11 +106,11 @@ class Settings(BaseSettings):
     ALLOWED_FILE_TYPES: set = {"txt", "md"}  # 僅支援 txt 和 markdown
 
     # ============================================
-    # RAG 配置
+    # RAG 配置 (優化版)
     # ============================================
-    CHUNK_SIZE: int = 500  # 每個 chunk 的字元數
-    CHUNK_OVERLAP: int = 50  # chunk 之間的重疊字元數
-    TOP_K_RETRIEVAL: int = 5  # 檢索時返回的文件數量
+    CHUNK_SIZE: int = 800  # 每個 chunk 的字元數 (增大以保留更多上下文)
+    CHUNK_OVERLAP: int = 200  # chunk 之間的重疊字元數 (增大以保持語意連貫)
+    TOP_K_RETRIEVAL: int = 8  # 檢索時返回的文件數量 (增加以提供更多相關內容)
 
     # ============================================
     # CORS 配置
